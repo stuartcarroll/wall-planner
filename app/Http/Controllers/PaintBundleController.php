@@ -1,7 +1,7 @@
 <?php
-namespace App\Http\Controllers;
+namespace app\Http\Controllers;
 
-use App\Models\Paint;
+use app\Models\Paint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
