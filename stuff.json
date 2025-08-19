@@ -1,0 +1,28 @@
+{
+  "key": "Bugs",
+  "Description": 1,
+  "Action required from this prompt": "Give steps to fix each bug listed. Where possible take all the bugs I present, then give me steps to fix them all as one set of instructions rather then per bug fixes",	
+  "Bugs": [
+	{
+	  "Bug Description": "When use clicks ",
+	  "Steps to reproduce": "Go tp 'Projects' from the navigation bar and then select 'New Project'. The page displayed there has the form to 'Create New User Group' rather then create a new project. This doesnt appear to be an issue with the navigation bar as the URL in the address bar is correct (/projects/create) ",
+	  "URL/Route": "/projects/create",
+	  "Error Message": "No error, just wrong form",
+	  "Expected Behavior": "I expect a page to let me create a new project"
+	},
+	{
+	  "Bug Description": "When an admin tries to edit a user, it gives me a create user form instead of letting me edit the user.",
+	  "Steps to reproduce": "goto /admin/users and click edit on one of the users",
+	  "URL/Route": "/admin/users/2/edit",
+	  "Error Message": "No error, wrong form.",
+	  "Expected Behavior": "to see the user details and be able to edit them"
+	},
+	{
+	  "Bug Description": "iew [admin.user-groups.create] not found. when going to /admin/user-groups/create",
+	  "Steps to reproduce": "goto URL",
+	  "URL/Route": "/admin/user-groups/create",
+	  "Error Message": "View [admin.user-groups.create] not found. and  View [{$name}] not found",
+	  "Expected Behavior": "form to create user group"
+	}
+  ]
+}
