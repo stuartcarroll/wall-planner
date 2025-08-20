@@ -4,6 +4,7 @@ namespace app\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
+use Inertia\Inertia;
 
 class PaintController extends Controller
 {
@@ -142,7 +143,54 @@ class PaintController extends Controller
             });
         }
 
+        // Apply manufacturer filter
+        if ($request->filled('manufacturer')) {
+            $paints = $paints->filter(function ($paint) use ($request) {
+                return $paint->maker === $request->manufacturer;
+            });
+        }
+
+        // Apply color filter
+        if ($request->filled('color_filter')) {
+            $paints = $paints->filter(function ($paint) use ($request) {
+                return $this->getColorFamily($paint->hex_color) === $request->color_filter;
+            });
+        }
+
         return view('paints.index', compact('paints'));
+    }
+
+    public function vueIndex(Request $request)
+    {
+        $paints = $this->getPaints();
+        // Apply search filter if provided
+        if ($request->filled('search')) {
+            $searchTerm = strtolower($request->search);
+            $paints = $paints->filter(function ($paint) use ($searchTerm) {
+                return str_contains(strtolower($paint->product_name), $searchTerm) ||
+                       str_contains(strtolower($paint->maker), $searchTerm) ||
+                       str_contains(strtolower($paint->product_code), $searchTerm) ||
+                       str_contains(strtolower($paint->form), $searchTerm);
+            });
+        }
+
+        // Apply manufacturer filter
+        if ($request->filled('manufacturer')) {
+            $paints = $paints->filter(function ($paint) use ($request) {
+                return $paint->maker === $request->manufacturer;
+            });
+        }
+
+        // Apply color filter
+        if ($request->filled('color_filter')) {
+            $paints = $paints->filter(function ($paint) use ($request) {
+                return $this->getColorFamily($paint->hex_color) === $request->color_filter;
+            });
+        }
+
+        return Inertia::render('Paints/Index', [
+            'paints' => $paints->values(),
+        ]);
     }
 
     public function create()
@@ -297,5 +345,130 @@ class PaintController extends Controller
 
         return redirect()->route('paints.index')->with('success', 
             'Paint "' . $paintName . '" has been deleted successfully!');
+    }
+
+    public function bulkDelete(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return redirect()->route('paints.index')->with('error', 'Only administrators can perform bulk operations.');
+        }
+
+        $request->validate([
+            'paint_ids' => 'required|array',
+            'paint_ids.*' => 'required|string'
+        ]);
+
+        $paints = $this->getPaints();
+        $deletedCount = 0;
+
+        foreach ($request->paint_ids as $paintId) {
+            if ($paints->has($paintId)) {
+                $paints->forget($paintId);
+                $deletedCount++;
+            }
+        }
+
+        $this->savePaints($paints);
+
+        return redirect()->route('paints.index')->with('success', 
+            "Successfully deleted {$deletedCount} paint(s).");
+    }
+
+    public function csvImport(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $request->validate([
+            'csv_file' => 'required|file|mimes:csv,txt|max:2048'
+        ]);
+
+        try {
+            $file = $request->file('csv_file');
+            $csvData = array_map('str_getcsv', file($file->path()));
+            $headers = array_shift($csvData); // Remove header row
+
+            $paints = $this->getPaints();
+            $importedCount = 0;
+            $nextId = $paints->keys()->max() + 1;
+
+            foreach ($csvData as $row) {
+                if (count($row) < count($headers)) continue; // Skip incomplete rows
+
+                $paintData = array_combine($headers, $row);
+                
+                // Validate required fields
+                if (empty($paintData['product_name']) || empty($paintData['maker']) || empty($paintData['hex_color'])) {
+                    continue;
+                }
+
+                // Create new paint object
+                $paint = (object)[
+                    'id' => $nextId,
+                    'product_name' => $paintData['product_name'] ?? '',
+                    'product_code' => $paintData['product_code'] ?? 'IMPORT-' . $nextId,
+                    'maker' => $paintData['maker'] ?? '',
+                    'form' => $paintData['form'] ?? 'emulsion',
+                    'hex_color' => $paintData['hex_color'] ?? '#000000',
+                    'cmyk_c' => intval($paintData['cmyk_c'] ?? 0),
+                    'cmyk_m' => intval($paintData['cmyk_m'] ?? 0),
+                    'cmyk_y' => intval($paintData['cmyk_y'] ?? 0),
+                    'cmyk_k' => intval($paintData['cmyk_k'] ?? 0),
+                    'rgb_r' => intval($paintData['rgb_r'] ?? 0),
+                    'rgb_g' => intval($paintData['rgb_g'] ?? 0),
+                    'rgb_b' => intval($paintData['rgb_b'] ?? 0),
+                    'price_gbp' => floatval($paintData['price_gbp'] ?? 0.00),
+                    'volume_ml' => intval($paintData['volume_ml'] ?? 1000),
+                    'color_description' => $paintData['color_description'] ?? ''
+                ];
+
+                $paints->put($nextId, $paint);
+                $nextId++;
+                $importedCount++;
+            }
+
+            $this->savePaints($paints);
+
+            return response()->json([
+                'success' => true, 
+                'message' => "Successfully imported {$importedCount} paints."
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false, 
+                'message' => 'Import failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function getColorFamily($hexColor)
+    {
+        // Simple color family detection
+        $hex = str_replace('#', '', $hexColor);
+        $r = hexdec(substr($hex, 0, 2));
+        $g = hexdec(substr($hex, 2, 2));
+        $b = hexdec(substr($hex, 4, 2));
+        
+        $max = max($r, $g, $b);
+        $min = min($r, $g, $b);
+        
+        // Handle grayscale colors
+        if ($max - $min < 50) {
+            if ($max < 100) return 'black';
+            if ($min > 200) return 'white';
+            return 'gray';
+        }
+        
+        // Handle chromatic colors
+        if ($r === $max) {
+            if ($g > $b) return ($g > 150) ? 'yellow' : 'red';
+            return ($r > 200 && $b > 150) ? 'pink' : 'red';
+        }
+        if ($g === $max) return ($b > $r) ? 'blue' : 'green';
+        if ($b === $max) return ($r > $g) ? 'purple' : 'blue';
+        
+        return 'other';
     }
 }

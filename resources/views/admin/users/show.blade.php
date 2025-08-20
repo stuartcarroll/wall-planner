@@ -67,3 +67,13 @@
                                                 Not Verified
                                             </span>
                                         @endif
+                                    </dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</x-app-layout>

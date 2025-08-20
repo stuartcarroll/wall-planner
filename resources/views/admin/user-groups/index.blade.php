@@ -1,21 +1,33 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('User Groups') }}
-        </h2>
+        <div class="flex justify-between items-center">
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                {{ __('User Groups') }}
+            </h2>
+            <a href="{{ route('admin.user-groups.create') }}" 
+               class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+                Create Group
+            </a>
+        </div>
     </x-slot>
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-lg font-semibold">User Groups Management</h3>
-                        
-                        <a href="{{ route('admin.user-groups.create') }}" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
-                            Create Group
-                        </a>
-                    </div>
+                    
+                    <!-- Success/Error Messages -->
+                    @if(session('success'))
+                        <div class="bg-green-50 border border-green-200 rounded-md p-4 mb-6">
+                            <div class="text-green-800">{{ session('success') }}</div>
+                        </div>
+                    @endif
+
+                    @if(session('error'))
+                        <div class="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+                            <div class="text-red-800">{{ session('error') }}</div>
+                        </div>
+                    @endif
 
                     <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-6">
                         <div class="flex">
@@ -46,6 +58,9 @@
                                     <div class="space-x-2">
                                         <a href="{{ route('admin.user-groups.show', $group) }}" class="text-blue-500 hover:text-blue-700 text-sm">
                                             View
+                                        </a>
+                                        <a href="{{ route('admin.user-groups.manage-users', $group) }}" class="text-green-500 hover:text-green-700 text-sm">
+                                            Users
                                         </a>
                                         <a href="{{ route('admin.user-groups.edit', $group) }}" class="text-indigo-500 hover:text-indigo-700 text-sm">
                                             Edit

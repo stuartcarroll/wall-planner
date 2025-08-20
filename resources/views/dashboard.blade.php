@@ -173,21 +173,27 @@
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Total Paints:</span>
                                 <span class="font-medium">
-                                    @try
-                                        {{ \App\Models\Paint::count() }}
-                                    @catch(\Exception $e)
-                                        0
-                                    @endtry
+                                    @php
+                                        try {
+                                            $paintCount = \App\Models\Paint::count();
+                                        } catch (\Exception $e) {
+                                            $paintCount = 0;
+                                        }
+                                    @endphp
+                                    {{ $paintCount }}
                                 </span>
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-gray-600">Your Projects:</span>
                                 <span class="font-medium">
-                                    @try
-                                        {{ auth()->user()->ownedProjects()->count() }}
-                                    @catch(\Exception $e)
-                                        0
-                                    @endtry
+                                    @php
+                                        try {
+                                            $userProjectCount = \App\Models\Project::where('owner_id', auth()->id())->count();
+                                        } catch (\Exception $e) {
+                                            $userProjectCount = 0;
+                                        }
+                                    @endphp
+                                    {{ $userProjectCount }}
                                 </span>
                             </div>
                             <div class="flex justify-between">

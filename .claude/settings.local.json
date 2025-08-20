@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php:*)",
+      "Bash(del \"C:\\Users\\stu.carroll\\Laravel\\wall-planner\\test_admin.php\")",
+      "Bash(rm:*)",
+      "Bash(find:*)",
+      "Bash(composer install:*)",
+      "Bash(mkdir:*)",
+      "Bash(composer:*)",
+      "Bash(del bootstrapcache*.php)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(curl:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npx create-next-app:*)",
+      "WebFetch(domain:localhost)",
+      "Bash(npm uninstall:*)",
+      "Bash(npx tailwindcss init:*)",
+      "Bash(sqlite3:*)",
+      "Bash(del test_projects.php)",
+      "Bash(taskkill:*)",
+      "Bash(cmd //c:*)",
+      "Bash(git add:*)"
+    ],
+    "defaultMode": "acceptEdits",
+    "additionalDirectories": [
+      "C:\\Users\\stu.carroll",
+      "C:\\d C:\\Users\\stu.carroll\\Laravel"
+    ]
+  }
+}

@@ -13,6 +13,16 @@ return new class extends Migration
     {
         Schema::create('projects', function (Blueprint $table) {
             $table->id();
+            $table->string('name');
+            $table->text('description');
+            $table->string('location');
+            $table->integer('wall_height_cm');
+            $table->integer('wall_width_cm');
+            $table->string('location_url')->nullable();
+            $table->string('project_manager_email')->nullable();
+            $table->string('permalink')->unique();
+            $table->foreignId('owner_id')->constrained('users');
+            $table->string('owner_name');
             $table->timestamps();
         });
     }

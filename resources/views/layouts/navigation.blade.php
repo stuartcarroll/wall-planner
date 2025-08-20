@@ -31,6 +31,11 @@
                         {{ __('Projects') }}
                     </x-nav-link>
 
+                    <!-- Paint Bundles -->
+                    <x-nav-link :href="route('paint-bundles.index')" :active="request()->routeIs('paint-bundles.*')">
+                        {{ __('Paint Bundles') }}
+                    </x-nav-link>
+
                     <!-- Admin Menu (Only for Admins) -->
                     @if(auth()->user()->isAdmin())
                     <div class="hidden sm:flex sm:items-center sm:ml-6">
@@ -131,6 +136,10 @@
 
             <x-responsive-nav-link :href="route('projects.index')" :active="request()->routeIs('projects.*')">
                 {{ __('Projects') }}
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('paint-bundles.index')" :active="request()->routeIs('paint-bundles.*')">
+                {{ __('Paint Bundles') }}
             </x-responsive-nav-link>
 
             @if(auth()->user()->isAdmin())

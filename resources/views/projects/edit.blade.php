@@ -75,6 +75,18 @@
                             @enderror
                         </div>
 
+                        <div>
+                            <label for="project_manager_email" class="block text-sm font-medium text-gray-700">Project Manager Email (Optional)</label>
+                            <input type="email" name="project_manager_email" id="project_manager_email"
+                                   value="{{ old('project_manager_email', $project->project_manager_email ?? '') }}"
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                   placeholder="manager@example.com">
+                            @error('project_manager_email')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                            <p class="mt-1 text-sm text-gray-500">If specified, this person will also be able to edit and manage the project</p>
+                        </div>
+
                         <div class="flex justify-between">
                             <a href="{{ route('projects.show', $project->id) }}" 
                                class="inline-flex items-center px-4 py-2 bg-gray-300 border border-transparent rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-400">
