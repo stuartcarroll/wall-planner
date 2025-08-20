@@ -3,122 +3,55 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Paint;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 
 class PaintApiController extends Controller
 {
-    private function getPaints()
-    {
-        // Use session storage to persist between requests
-        return collect(Session::get('paints', [
-            1 => (object)[
-                'id' => 1,
-                'product_name' => 'Heritage Red',
-                'maker' => 'Farrow & Ball',
-                'product_code' => 'FB-294',
-                'form' => 'estate emulsion',
-                'hex_color' => '#B91927',
-                'cmyk_c' => 20,
-                'cmyk_m' => 95,
-                'cmyk_y' => 85,
-                'cmyk_k' => 10,
-                'rgb_r' => 185,
-                'rgb_g' => 25,
-                'rgb_b' => 39,
-                'price_gbp' => 89.00,
-                'volume_ml' => 2500,
-                'color_description' => 'A deep, sophisticated red inspired by traditional English heritage colors'
-            ],
-            2 => (object)[
-                'id' => 2,
-                'product_name' => 'Duck Egg Blue',
-                'maker' => 'Farrow & Ball',
-                'product_code' => 'FB-203',
-                'form' => 'modern emulsion',
-                'hex_color' => '#9EB8D0',
-                'cmyk_c' => 35,
-                'cmyk_m' => 15,
-                'cmyk_y' => 0,
-                'cmyk_k' => 15,
-                'rgb_r' => 158,
-                'rgb_g' => 184,
-                'rgb_b' => 208,
-                'price_gbp' => 89.00,
-                'volume_ml' => 2500,
-                'color_description' => 'A timeless blue-green that brings serenity to any space'
-            ],
-            3 => (object)[
-                'id' => 3,
-                'product_name' => 'Elephant\'s Breath',
-                'maker' => 'Farrow & Ball',
-                'product_code' => 'FB-229',
-                'form' => 'estate emulsion',
-                'hex_color' => '#9C8A7D',
-                'cmyk_c' => 35,
-                'cmyk_m' => 40,
-                'cmyk_y' => 50,
-                'cmyk_k' => 5,
-                'rgb_r' => 156,
-                'rgb_g' => 138,
-                'rgb_b' => 125,
-                'price_gbp' => 89.00,
-                'volume_ml' => 2500,
-                'color_description' => 'A sophisticated neutral that works beautifully in any setting'
-            ]
-        ]));
-    }
-
     public function index(Request $request)
     {
-        $paints = $this->getPaints();
+        $query = Paint::query();
         
         // Apply search filter if provided
         if ($request->filled('search')) {
-            $searchTerm = strtolower($request->search);
-            $paints = $paints->filter(function ($paint) use ($searchTerm) {
-                return str_contains(strtolower($paint->product_name), $searchTerm) ||
-                       str_contains(strtolower($paint->maker), $searchTerm) ||
-                       str_contains(strtolower($paint->product_code), $searchTerm) ||
-                       str_contains(strtolower($paint->form), $searchTerm);
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('product_name', 'like', "%{$searchTerm}%")
+                  ->orWhere('maker', 'like', "%{$searchTerm}%")
+                  ->orWhere('product_code', 'like', "%{$searchTerm}%")
+                  ->orWhere('form', 'like', "%{$searchTerm}%");
             });
         }
 
         // Apply manufacturer filter
         if ($request->filled('manufacturer')) {
-            $paints = $paints->filter(function ($paint) use ($request) {
-                return $paint->maker === $request->manufacturer;
-            });
+            $query->where('maker', $request->manufacturer);
         }
 
         // Apply color filter
         if ($request->filled('color_filter')) {
-            $paints = $paints->filter(function ($paint) use ($request) {
-                return $this->getColorFamily($paint->hex_color) === $request->color_filter;
-            });
+            $query->where('hex_color', 'like', $this->getColorFilterPattern($request->color_filter));
         }
 
+        $paints = $query->orderBy('maker')->orderBy('product_name')->get();
+        $manufacturers = Paint::select('maker')->distinct()->orderBy('maker')->pluck('maker');
+
         return response()->json([
-            'data' => $paints->values(),
-            'manufacturers' => $this->getPaints()->pluck('maker')->unique()->sort()->values(),
+            'data' => $paints,
+            'manufacturers' => $manufacturers,
         ]);
     }
 
-    public function show($id)
+    public function show(Paint $paint)
     {
-        $paints = $this->getPaints();
-        $paint = $paints->get($id);
-        
-        if (!$paint) {
-            return response()->json(['error' => 'Paint not found'], 404);
-        }
-
         return response()->json(['data' => $paint]);
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'product_name' => 'required|string|max:255',
             'product_code' => 'required|string|max:255',
             'maker' => 'required|string|max:255',
@@ -127,71 +60,256 @@ class PaintApiController extends Controller
             'price_gbp' => 'required|numeric|min:0',
             'volume_ml' => 'required|integer|min:1',
             'color_description' => 'nullable|string',
+            'cmyk_c' => 'nullable|integer|min:0|max:100',
+            'cmyk_m' => 'nullable|integer|min:0|max:100',
+            'cmyk_y' => 'nullable|integer|min:0|max:100',
+            'cmyk_k' => 'nullable|integer|min:0|max:100',
+            'rgb_r' => 'nullable|integer|min:0|max:255',
+            'rgb_g' => 'nullable|integer|min:0|max:255',
+            'rgb_b' => 'nullable|integer|min:0|max:255',
         ]);
 
-        $paints = $this->getPaints();
-        $newId = $paints->keys()->max() + 1;
-        
-        $newPaint = (object) array_merge($validated, [
-            'id' => $newId,
-            'cmyk_c' => 0,
-            'cmyk_m' => 0,
-            'cmyk_y' => 0,
-            'cmyk_k' => 0,
-            'rgb_r' => 0,
-            'rgb_g' => 0,
-            'rgb_b' => 0,
-        ]);
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
 
-        $paints->put($newId, $newPaint);
-        Session::put('paints', $paints->toArray());
+        // Calculate RGB from hex if not provided
+        $data = $validator->validated();
+        if (!isset($data['rgb_r'])) {
+            $rgb = $this->hexToRgb($data['hex_color']);
+            $data['rgb_r'] = $rgb['r'];
+            $data['rgb_g'] = $rgb['g'];
+            $data['rgb_b'] = $rgb['b'];
+        }
+
+        $paint = Paint::create($data);
 
         return response()->json([
-            'data' => $newPaint,
+            'data' => $paint,
             'message' => 'Paint created successfully'
         ], 201);
     }
 
-    public function destroy($id)
+    public function update(Request $request, Paint $paint)
     {
-        $paints = $this->getPaints();
-        
-        if (!$paints->has($id)) {
-            return response()->json(['error' => 'Paint not found'], 404);
+        $validator = Validator::make($request->all(), [
+            'product_name' => 'required|string|max:255',
+            'product_code' => 'required|string|max:255',
+            'maker' => 'required|string|max:255',
+            'form' => 'required|string|max:255',
+            'hex_color' => 'required|string|size:7|regex:/^#[A-Fa-f0-9]{6}$/',
+            'price_gbp' => 'required|numeric|min:0',
+            'volume_ml' => 'required|integer|min:1',
+            'color_description' => 'nullable|string',
+            'cmyk_c' => 'nullable|integer|min:0|max:100',
+            'cmyk_m' => 'nullable|integer|min:0|max:100',
+            'cmyk_y' => 'nullable|integer|min:0|max:100',
+            'cmyk_k' => 'nullable|integer|min:0|max:100',
+            'rgb_r' => 'nullable|integer|min:0|max:255',
+            'rgb_g' => 'nullable|integer|min:0|max:255',
+            'rgb_b' => 'nullable|integer|min:0|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $paint = $paints->get($id);
-        $paints->forget($id);
-        Session::put('paints', $paints->toArray());
+        $data = $validator->validated();
+        
+        // Calculate RGB from hex if not provided
+        if (!isset($data['rgb_r'])) {
+            $rgb = $this->hexToRgb($data['hex_color']);
+            $data['rgb_r'] = $rgb['r'];
+            $data['rgb_g'] = $rgb['g'];
+            $data['rgb_b'] = $rgb['b'];
+        }
+
+        $paint->update($data);
+
+        return response()->json([
+            'data' => $paint,
+            'message' => 'Paint updated successfully'
+        ]);
+    }
+
+    public function destroy(Paint $paint)
+    {
+        $paint->delete();
 
         return response()->json([
             'message' => 'Paint deleted successfully'
         ]);
     }
 
-    private function getColorFamily($hexColor)
+    public function importCsv(Request $request)
     {
-        $hex = str_replace('#', '', $hexColor);
-        $r = hexdec(substr($hex, 0, 2));
-        $g = hexdec(substr($hex, 2, 2));
-        $b = hexdec(substr($hex, 4, 2));
-        
-        $max = max($r, $g, $b);
-        $min = min($r, $g, $b);
-        
-        if ($max - $min < 50) {
-            if ($max < 100) return 'black';
-            if ($min > 200) return 'white';
-            return 'gray';
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|file|mimes:csv,txt|max:10240', // 10MB max
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
         }
+
+        $file = $request->file('file');
+        $path = $file->getRealPath();
         
-        if ($r === $max) {
-            if ($g > $b) return $g > 150 ? 'yellow' : 'red';
-            return $r > 200 && $b > 150 ? 'pink' : 'red';
+        $csvData = array_map('str_getcsv', file($path));
+        
+        if (empty($csvData)) {
+            return response()->json(['error' => 'CSV file is empty'], 422);
         }
-        if ($g === $max) return $b > $r ? 'blue' : 'green';
-        if ($b === $max) return $r > $g ? 'purple' : 'blue';
+
+        // Get the header row
+        $header = array_shift($csvData);
+        $header = array_map('trim', $header);
         
-        return 'other';
+        // Expected columns
+        $expectedColumns = [
+            'product_name', 'product_code', 'maker', 'form', 'hex_color', 
+            'price_gbp', 'volume_ml', 'color_description'
+        ];
+        $optionalColumns = [
+            'cmyk_c', 'cmyk_m', 'cmyk_y', 'cmyk_k', 'rgb_r', 'rgb_g', 'rgb_b'
+        ];
+        
+        // Check for required columns
+        $missingColumns = array_diff($expectedColumns, $header);
+        if (!empty($missingColumns)) {
+            return response()->json([
+                'error' => 'Missing required columns: ' . implode(', ', $missingColumns),
+                'expected_columns' => $expectedColumns,
+                'optional_columns' => $optionalColumns,
+                'found_columns' => $header
+            ], 422);
+        }
+
+        $imported = 0;
+        $errors = [];
+        $duplicates = [];
+
+        DB::beginTransaction();
+        
+        try {
+            foreach ($csvData as $rowIndex => $row) {
+                $rowData = array_combine($header, $row);
+                $rowNumber = $rowIndex + 2; // +2 because we removed header and rows are 1-indexed
+                
+                // Skip empty rows
+                if (empty(array_filter($row))) {
+                    continue;
+                }
+
+                // Validate required fields
+                $validator = Validator::make($rowData, [
+                    'product_name' => 'required|string|max:255',
+                    'product_code' => 'required|string|max:255',
+                    'maker' => 'required|string|max:255',
+                    'form' => 'required|string|max:255',
+                    'hex_color' => 'required|string|size:7|regex:/^#[A-Fa-f0-9]{6}$/',
+                    'price_gbp' => 'required|numeric|min:0',
+                    'volume_ml' => 'required|integer|min:1',
+                    'color_description' => 'nullable|string',
+                    'cmyk_c' => 'nullable|integer|min:0|max:100',
+                    'cmyk_m' => 'nullable|integer|min:0|max:100',
+                    'cmyk_y' => 'nullable|integer|min:0|max:100',
+                    'cmyk_k' => 'nullable|integer|min:0|max:100',
+                    'rgb_r' => 'nullable|integer|min:0|max:255',
+                    'rgb_g' => 'nullable|integer|min:0|max:255',
+                    'rgb_b' => 'nullable|integer|min:0|max:255',
+                ]);
+
+                if ($validator->fails()) {
+                    $errors[] = [
+                        'row' => $rowNumber,
+                        'errors' => $validator->errors()->all()
+                    ];
+                    continue;
+                }
+
+                $data = $validator->validated();
+
+                // Check for duplicates by product_code and maker
+                $existing = Paint::where('product_code', $data['product_code'])
+                                ->where('maker', $data['maker'])
+                                ->first();
+                
+                if ($existing) {
+                    $duplicates[] = [
+                        'row' => $rowNumber,
+                        'product_code' => $data['product_code'],
+                        'maker' => $data['maker'],
+                        'message' => 'Paint with this code and maker already exists'
+                    ];
+                    continue;
+                }
+
+                // Calculate RGB from hex if not provided
+                if (!isset($data['rgb_r']) || empty($data['rgb_r'])) {
+                    $rgb = $this->hexToRgb($data['hex_color']);
+                    $data['rgb_r'] = $rgb['r'];
+                    $data['rgb_g'] = $rgb['g'];
+                    $data['rgb_b'] = $rgb['b'];
+                }
+
+                // Clean up empty optional fields
+                foreach ($optionalColumns as $col) {
+                    if (isset($data[$col]) && $data[$col] === '') {
+                        $data[$col] = null;
+                    }
+                }
+
+                Paint::create($data);
+                $imported++;
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => "CSV import completed successfully",
+                'imported' => $imported,
+                'total_rows' => count($csvData),
+                'errors' => $errors,
+                'duplicates' => $duplicates,
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json([
+                'error' => 'Import failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function hexToRgb($hex)
+    {
+        $hex = str_replace('#', '', $hex);
+        
+        return [
+            'r' => hexdec(substr($hex, 0, 2)),
+            'g' => hexdec(substr($hex, 2, 2)),
+            'b' => hexdec(substr($hex, 4, 2))
+        ];
+    }
+
+    private function getColorFilterPattern($colorFamily)
+    {
+        // This is a simplified pattern matching for color families
+        // In a real implementation, you might want more sophisticated color matching
+        $patterns = [
+            'red' => '%',
+            'blue' => '%',
+            'green' => '%',
+            'yellow' => '%',
+            'orange' => '%',
+            'purple' => '%',
+            'pink' => '%',
+            'brown' => '%',
+            'gray' => '%',
+            'black' => '%',
+            'white' => '%',
+        ];
+
+        return $patterns[$colorFamily] ?? '%';
     }
 }

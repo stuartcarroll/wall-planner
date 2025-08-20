@@ -21,7 +21,9 @@
       "Bash(del test_projects.php)",
       "Bash(taskkill:*)",
       "Bash(cmd //c:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(del test_paints.csv)",
+      "WebFetch(domain:loopcolors.com)"
     ],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [

@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\ProjectImageApiController;
 use App\Http\Controllers\Api\PaintBundleApiController;
 use App\Http\Controllers\Api\UserApiController;
 use App\Http\Controllers\Api\DashboardApiController;
+use App\Http\Controllers\Api\WebScrapingController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -19,6 +20,7 @@ Route::get('/auth/csrf-token', [AuthApiController::class, 'csrfToken']);
 
 // Paint API routes
 Route::apiResource('paints', PaintApiController::class);
+Route::post('/paints/import', [PaintApiController::class, 'importCsv'])->middleware('auth:sanctum');
 
 // Project API routes
 Route::apiResource('projects', ProjectApiController::class)->middleware('auth:sanctum');
@@ -47,6 +49,13 @@ Route::middleware(['auth:sanctum', 'admin'])->group(function () {
 
 // Dashboard API
 Route::get('/dashboard', [DashboardApiController::class, 'index'])->middleware('auth:sanctum');
+
+// Web Scraping API (Admin only)
+Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::post('/scraping/product-list', [WebScrapingController::class, 'scrapeProductList']);
+    Route::post('/scraping/product-details', [WebScrapingController::class, 'scrapeProductDetails']);
+    Route::post('/scraping/batch', [WebScrapingController::class, 'scrapeBatch']);
+});
 
 // Test route without auth
 Route::get('/test', function() {

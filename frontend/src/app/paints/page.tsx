@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useBasket } from '@/contexts/BasketContext'
 import { useRouter } from 'next/navigation'
 import Navigation from '@/components/Navigation'
+import PaintCsvImport from '@/components/PaintCsvImport'
+import WebScraper from '@/components/WebScraper'
 
 interface Paint {
   id: number
@@ -16,6 +18,15 @@ interface Paint {
   price_gbp: number
   volume_ml: number
   color_description: string
+  cmyk_c?: number
+  cmyk_m?: number
+  cmyk_y?: number
+  cmyk_k?: number
+  rgb_r?: number
+  rgb_g?: number
+  rgb_b?: number
+  created_at?: string
+  updated_at?: string
 }
 
 interface PaintResponse {
@@ -144,6 +155,12 @@ export default function Paints() {
               </div>
             </div>
           </div>
+          
+          {/* CSV Import Section */}
+          <PaintCsvImport onImportComplete={fetchPaints} />
+          
+          {/* Web Scraper Section (Admin only) */}
+          <WebScraper onScrapingComplete={fetchPaints} />
         </div>
 
         <div className="flex gap-6">
@@ -216,7 +233,7 @@ export default function Paints() {
                           {paint.volume_ml}ml
                         </td>
                         <td className="px-4 py-4 text-sm font-semibold text-green-600">
-                          £{paint.price_gbp.toFixed(2)}
+                          £{Number(paint.price_gbp).toFixed(2)}
                         </td>
                         <td className="px-4 py-4">
                           <input
@@ -289,7 +306,7 @@ export default function Paints() {
                             {item.paint.product_name}
                           </div>
                           <div className="text-xs text-gray-500">
-                            {item.paint.maker} • £{item.paint.price_gbp.toFixed(2)}
+                            {item.paint.maker} • £{Number(item.paint.price_gbp).toFixed(2)}
                           </div>
                         </div>
                         <div className="text-sm font-semibold text-gray-900">

@@ -27,8 +27,15 @@ class Paint extends Model
     ];
 
     protected $casts = [
-        'price_gbp' => 'decimal:2',
+        'price_gbp' => 'float',
         'volume_ml' => 'integer',
+        'cmyk_c' => 'integer',
+        'cmyk_m' => 'integer',
+        'cmyk_y' => 'integer',
+        'cmyk_k' => 'integer',
+        'rgb_r' => 'integer',
+        'rgb_g' => 'integer',
+        'rgb_b' => 'integer',
     ];
 
     public function getVolumeDisplayAttribute()
