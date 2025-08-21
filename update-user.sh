@@ -69,7 +69,7 @@ composer install --no-dev --optimize-autoloader --no-interaction
 
 # Install/update Node.js dependencies
 print_status "Updating Node.js dependencies..."
-npm ci --only=production
+npm ci
 
 # Build frontend assets
 print_status "Rebuilding production assets..."

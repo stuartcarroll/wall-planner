@@ -108,7 +108,7 @@ sudo -u www-data composer install --no-dev --optimize-autoloader --no-interactio
 
 # Install Node.js dependencies
 print_status "Installing Node.js dependencies..."
-sudo -u www-data npm ci --only=production
+sudo -u www-data npm ci
 
 # Build frontend assets
 print_status "Building production assets..."

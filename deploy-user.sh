@@ -91,7 +91,7 @@ composer install --no-dev --optimize-autoloader --no-interaction
 
 # Install Node.js dependencies
 print_status "Installing Node.js dependencies..."
-npm ci --only=production
+npm ci
 
 # Build frontend assets
 print_status "Building production assets..."
