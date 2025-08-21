@@ -16,7 +16,10 @@ use Inertia\Inertia;
 */
 
 Route::get('/', function () {
-    return 'Laravel is working! Auth check: ' . (auth()->check() ? 'logged in' : 'not logged in');
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+    return redirect()->route('login');
 });
 
 Route::get('/home', function () {
@@ -24,7 +27,16 @@ Route::get('/home', function () {
 });
 
 Route::get('/dashboard', function () {
-    return view('dashboard');
+    return Inertia::render('Dashboard', [
+        'auth' => [
+            'user' => auth()->user()->load('userGroups')
+        ],
+        'stats' => [
+            'paintCount' => App\Models\Paint::count(),
+            'userProjectCount' => App\Models\Project::where('user_id', auth()->id())->count(),
+            'userCount' => App\Models\User::count(),
+        ]
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 // Test routes without auth
