@@ -195,12 +195,89 @@ fi
 
 # Test database connection
 print_status "Testing database connection..."
-if php artisan migrate:status >/dev/null 2>&1; then
+DB_TEST_OUTPUT=$(php artisan migrate:status 2>&1)
+DB_TEST_STATUS=$?
+
+if [ $DB_TEST_STATUS -eq 0 ]; then
     print_success "Database connection successful ✓"
 else
-    print_error "Database connection failed. Please check your .env configuration"
-    print_error "Run 'php artisan migrate:status' to test"
-    exit 1
+    print_error "Database connection failed!"
+    print_error "Error details:"
+    echo "$DB_TEST_OUTPUT"
+    echo ""
+    print_warning "Common issues to check:"
+    print_warning "1. Database server is running"
+    print_warning "2. Database exists (create it if needed)"
+    print_warning "3. Username/password are correct"
+    print_warning "4. Host/port are correct"
+    print_warning "5. User has permissions to access the database"
+    echo ""
+    
+    # Show current database settings from .env
+    if [ -f ".env" ]; then
+        print_status "Current database settings in .env:"
+        grep "DB_" .env | while read line; do
+            if [[ $line == *"PASSWORD"* ]]; then
+                echo "  DB_PASSWORD=[hidden]"
+            else
+                echo "  $line"
+            fi
+        done
+        echo ""
+    fi
+    
+    # Offer to reconfigure database
+    read -p "Would you like to reconfigure database settings? (y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        print_status "Reconfiguring database settings..."
+        
+        # Re-prompt for database settings
+        read -p "Database Host [$(grep DB_HOST .env | cut -d'=' -f2)]: " NEW_DB_HOST
+        if [ ! -z "$NEW_DB_HOST" ]; then
+            sed -i "s/DB_HOST=.*/DB_HOST=$NEW_DB_HOST/" .env
+        fi
+        
+        read -p "Database Name [$(grep DB_DATABASE .env | cut -d'=' -f2)]: " NEW_DB_DATABASE
+        if [ ! -z "$NEW_DB_DATABASE" ]; then
+            sed -i "s/DB_DATABASE=.*/DB_DATABASE=$NEW_DB_DATABASE/" .env
+        fi
+        
+        read -p "Database Username [$(grep DB_USERNAME .env | cut -d'=' -f2)]: " NEW_DB_USERNAME
+        if [ ! -z "$NEW_DB_USERNAME" ]; then
+            sed -i "s/DB_USERNAME=.*/DB_USERNAME=$NEW_DB_USERNAME/" .env
+        fi
+        
+        echo -n "Database Password: "
+        read -s NEW_DB_PASSWORD
+        echo
+        if [ ! -z "$NEW_DB_PASSWORD" ]; then
+            sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=$NEW_DB_PASSWORD/" .env
+        fi
+        
+        read -p "Database Port [$(grep DB_PORT .env | cut -d'=' -f2)]: " NEW_DB_PORT
+        if [ ! -z "$NEW_DB_PORT" ]; then
+            sed -i "s/DB_PORT=.*/DB_PORT=$NEW_DB_PORT/" .env
+        fi
+        
+        # Test connection again
+        print_status "Testing updated database connection..."
+        DB_TEST_OUTPUT=$(php artisan migrate:status 2>&1)
+        DB_TEST_STATUS=$?
+        
+        if [ $DB_TEST_STATUS -eq 0 ]; then
+            print_success "Database connection successful ✓"
+        else
+            print_error "Database connection still failing:"
+            echo "$DB_TEST_OUTPUT"
+            print_error "Please manually check your database configuration and try again"
+            exit 1
+        fi
+    else
+        print_error "Cannot proceed without database connection"
+        print_status "Please fix database issues and run the script again"
+        exit 1
+    fi
 fi
 
 # Run database migrations
