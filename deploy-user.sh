@@ -105,29 +105,92 @@ if [ ! -f ".env" ]; then
     # Generate application key
     php artisan key:generate --no-interaction
     
-    print_warning "Environment file created. Please configure your .env file:"
-    print_warning "Edit: $APP_DIR/.env"
-    print_warning ""
-    print_warning "Required settings to configure:"
-    print_warning "- Database connection (DB_*)"
-    print_warning "- Application URL (APP_URL)"
-    print_warning "- Mail settings (if needed)"
-    print_warning ""
+    print_status "Let's configure your application settings..."
+    echo ""
     
-    # Ask if user wants to edit now
-    read -p "Would you like to edit .env now? (y/n): " -n 1 -r
+    # Prompt for App URL
+    print_status "Application URL Configuration:"
+    read -p "Enter your application URL (e.g., http://164.92.129.228 or https://yourdomain.com): " APP_URL
+    if [ ! -z "$APP_URL" ]; then
+        sed -i "s|APP_URL=.*|APP_URL=$APP_URL|" .env
+        print_success "App URL set to: $APP_URL"
+    fi
+    
+    echo ""
+    print_status "Database Configuration:"
+    
+    # Prompt for Database Host
+    read -p "Database Host [localhost]: " DB_HOST
+    DB_HOST=${DB_HOST:-localhost}
+    sed -i "s/DB_HOST=.*/DB_HOST=$DB_HOST/" .env
+    
+    # Prompt for Database Name
+    read -p "Database Name [wall_planner]: " DB_DATABASE
+    DB_DATABASE=${DB_DATABASE:-wall_planner}
+    sed -i "s/DB_DATABASE=.*/DB_DATABASE=$DB_DATABASE/" .env
+    
+    # Prompt for Database Username
+    read -p "Database Username: " DB_USERNAME
+    if [ ! -z "$DB_USERNAME" ]; then
+        sed -i "s/DB_USERNAME=.*/DB_USERNAME=$DB_USERNAME/" .env
+    fi
+    
+    # Prompt for Database Password (hidden input)
+    echo -n "Database Password: "
+    read -s DB_PASSWORD
+    echo
+    if [ ! -z "$DB_PASSWORD" ]; then
+        sed -i "s/DB_PASSWORD=.*/DB_PASSWORD=$DB_PASSWORD/" .env
+    fi
+    
+    # Prompt for Database Port
+    read -p "Database Port [3306]: " DB_PORT
+    DB_PORT=${DB_PORT:-3306}
+    sed -i "s/DB_PORT=.*/DB_PORT=$DB_PORT/" .env
+    
+    echo ""
+    print_success "Environment configuration completed!"
+    print_status "Database settings:"
+    print_status "├── Host: $DB_HOST"
+    print_status "├── Database: $DB_DATABASE" 
+    print_status "├── Username: $DB_USERNAME"
+    print_status "├── Port: $DB_PORT"
+    print_status "└── Password: [hidden]"
+    
+    echo ""
+    # Ask if user wants to manually edit for additional settings
+    read -p "Would you like to manually edit .env for additional settings? (y/n): " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
+        print_status "Opening .env file for additional configuration..."
         ${EDITOR:-nano} .env
     fi
 fi
 
 # Check if .env is configured
-if grep -q "APP_KEY=base64:" .env && ! grep -q "DB_DATABASE=laravel" .env; then
+if grep -q "APP_KEY=base64:" .env; then
     print_success ".env file appears to be configured ✓"
 else
     print_warning ".env file may need configuration"
     print_warning "Please ensure database and other settings are correct"
+fi
+
+# Set some additional sensible defaults if they haven't been changed
+print_status "Setting additional environment defaults..."
+
+# Set environment to production
+sed -i "s/APP_ENV=.*/APP_ENV=production/" .env
+
+# Disable debug mode for production
+sed -i "s/APP_DEBUG=.*/APP_DEBUG=false/" .env
+
+# Set session and cache drivers (adjust as needed)
+if ! grep -q "SESSION_DRIVER=" .env; then
+    echo "SESSION_DRIVER=file" >> .env
+fi
+
+if ! grep -q "CACHE_DRIVER=" .env; then
+    echo "CACHE_DRIVER=file" >> .env
 fi
 
 # Test database connection
@@ -183,6 +246,13 @@ print_status "├── Git branch: $BRANCH"
 print_status "├── PHP version: $PHP_VERSION"
 print_status "├── Node.js version: $NODE_VERSION"
 print_status "├── Environment: Production"
+if [ -f ".env" ]; then
+    APP_URL_CONFIGURED=$(grep "APP_URL=" .env | cut -d'=' -f2)
+    DB_HOST_CONFIGURED=$(grep "DB_HOST=" .env | cut -d'=' -f2)
+    DB_DATABASE_CONFIGURED=$(grep "DB_DATABASE=" .env | cut -d'=' -f2)
+    print_status "├── App URL: $APP_URL_CONFIGURED"
+    print_status "├── Database: $DB_DATABASE_CONFIGURED@$DB_HOST_CONFIGURED"
+fi
 print_status "└── Status: Ready"
 echo ""
 
