@@ -33,7 +33,7 @@ Route::get('/dashboard', function () {
         ],
         'stats' => [
             'paintCount' => App\Models\Paint::count(),
-            'userProjectCount' => App\Models\Project::where('user_id', auth()->id())->count(),
+            'userProjectCount' => App\Models\Project::where('owner_id', auth()->id())->count(),
             'userCount' => App\Models\User::count(),
         ]
     ]);
