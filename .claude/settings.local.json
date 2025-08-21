@@ -23,7 +23,8 @@
       "Bash(cmd //c:*)",
       "Bash(git add:*)",
       "Bash(del test_paints.csv)",
-      "WebFetch(domain:loopcolors.com)"
+      "WebFetch(domain:loopcolors.com)",
+      "Bash(del cookies.txt)"
     ],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [
