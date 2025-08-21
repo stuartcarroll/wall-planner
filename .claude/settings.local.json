@@ -24,7 +24,8 @@
       "Bash(git add:*)",
       "Bash(del test_paints.csv)",
       "WebFetch(domain:loopcolors.com)",
-      "Bash(del cookies.txt)"
+      "Bash(del cookies.txt)",
+      "Bash(chmod:*)"
     ],
     "defaultMode": "acceptEdits",
     "additionalDirectories": [
